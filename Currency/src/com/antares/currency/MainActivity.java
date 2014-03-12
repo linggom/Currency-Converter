@@ -1,5 +1,6 @@
 package com.antares.currency;
 
+import java.lang.reflect.Type;
 import java.util.List;
 
 import retrofit.Callback;
@@ -8,8 +9,8 @@ import retrofit.client.Response;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
@@ -25,7 +26,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.antares.currency.client.CurrencyService;
-import com.antares.currency.client.ParsingJSONTask;
 import com.antares.currency.client.RestClient;
 import com.antares.currency.model.AvailableCurrencyResponse;
 import com.antares.currency.model.AvailableCurrencyResponse.Currency;
@@ -33,6 +33,7 @@ import com.antares.currency.model.AvailableCurrencyResponse.CurrencyResponse;
 import com.antares.currency.preference.PreferenceConstant;
 import com.antares.currency.preference.PreferenceManager;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 public class MainActivity extends Activity implements OnClickListener {
 
@@ -68,7 +69,7 @@ public class MainActivity extends Activity implements OnClickListener {
 		btnConvert = (Button)findViewById(btnConvertId);
 		tvResult = (TextView)findViewById(R.id.tvResult);
 		etFrom = (EditText)findViewById(R.id.etFrom);
-		
+
 		pbLoadingConvert = (ProgressBar)findViewById(R.id.pbLoadingConvert);
 		btnConvert.setOnClickListener(this);
 		spinnerSource.setOnItemSelectedListener(new OnItemSelectedListener() {
@@ -118,6 +119,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			}
 		});
 		json = PreferenceManager.getString(PreferenceConstant.PREF_AVAILABLE_CURRENCY);
+
 		if (json != null){
 			loadFromPreferenceCurrency();
 		}
@@ -137,47 +139,55 @@ public class MainActivity extends Activity implements OnClickListener {
 		tvResult.setVisibility(View.GONE);
 		etFrom.setVisibility(View.GONE);
 		pbLoadingConvert.setVisibility(View.GONE);
-		Log.e("GOMAN", "loadFromPreferenceCurrency");
-		ParsingJSONTask.parsing(this, json, new com.antares.currency.client.ParsingJSONTask.Callback() {
+
+		new AsyncTask<Void, Void, Object>() {
+
+			@Override
+			protected Object doInBackground(Void... params) {
+				Gson gson = new Gson();
+				Type t = new TypeToken<List<Currency>>(){}.getType();
+				Object o  = gson.fromJson(json, t);
+				return o;
+			}
 
 			@SuppressWarnings("unchecked")
 			@Override
-			public void onSuccess(Object object) {
+			protected void onPostExecute(Object result) {
 				// TODO Auto-generated method stub
-				listCurrencies = (List<Currency>) object;
-				ArrayAdapter<Currency> adapter = new ArrayAdapter<Currency>(MainActivity.this, R.layout.item_currency, R.id.tvItem, listCurrencies);
-				int sel = PreferenceManager.getInt(PreferenceConstant.PREF_FROM_CURRENCY);;
-				int sel2 = PreferenceManager.getInt(PreferenceConstant.PREF_TO_CURRENCY);
-				if (sel == 0){
-					for (int i = 0, b = listCurrencies.size(); i < b; i++) {
-						if (listCurrencies.get(i).toString().contains("USD")){
-							sel = i;
-							break;
+				super.onPostExecute(result);
+				if (MainActivity.this.getApplicationContext() != null){
+					if (result != null){
+						listCurrencies = (List<Currency>) result;
+						ArrayAdapter<Currency> adapter = new ArrayAdapter<Currency>(MainActivity.this, R.layout.item_currency, R.id.tvItem, listCurrencies);
+						int sel = PreferenceManager.getInt(PreferenceConstant.PREF_FROM_CURRENCY);;
+						int sel2 = PreferenceManager.getInt(PreferenceConstant.PREF_TO_CURRENCY);
+						if (sel == 0){
+							for (int i = 0, b = listCurrencies.size(); i < b; i++) {
+								if (listCurrencies.get(i).toString().contains("USD")){
+									sel = i;
+									break;
+								}
+							}
 						}
+
+						spinnerSource.setAdapter(adapter);
+						spinnerDestination.setAdapter(adapter);
+
+						spinnerSource.setSelection(sel);
+						spinnerDestination.setSelection(sel2);
+
+						layoutCustom.setVisibility(View.GONE);
+						pbLoading.setVisibility(View.GONE);
+						btnReload.setVisibility(View.GONE); 
+						textMessage.setVisibility(View.GONE);
+						layoutCurrency.setVisibility(View.VISIBLE);
+						btnConvert.setVisibility(View.VISIBLE);
+						etFrom.setVisibility(View.VISIBLE);
+						etFrom.requestFocus();
 					}
 				}
-				
-				spinnerSource.setAdapter(adapter);
-				spinnerDestination.setAdapter(adapter);
-					
-				spinnerSource.setSelection(sel);
-				spinnerDestination.setSelection(sel2);
-				
-				layoutCustom.setVisibility(View.GONE);
-				pbLoading.setVisibility(View.GONE);
-				btnReload.setVisibility(View.GONE); 
-				textMessage.setVisibility(View.GONE);
-				layoutCurrency.setVisibility(View.VISIBLE);
-				btnConvert.setVisibility(View.VISIBLE);
-				etFrom.setVisibility(View.VISIBLE);
-				etFrom.requestFocus();
 			}
-
-			@Override
-			public void onFailed() {
-				Log.e("GOMAN", "1 failed");
-			}
-		});
+		}.execute();
 
 	}
 
@@ -239,14 +249,14 @@ public class MainActivity extends Activity implements OnClickListener {
 						}
 					}
 				}
-				
+
 				spinnerSource.setAdapter(adapter);
 				spinnerDestination.setAdapter(adapter);
-				
+
 				spinnerSource.setSelection(sel);
 				spinnerDestination.setSelection(sel2);
-				
-				
+
+
 				layoutCustom.setVisibility(View.GONE);
 				pbLoading.setVisibility(View.GONE);
 				btnReload.setVisibility(View.GONE);
@@ -260,7 +270,6 @@ public class MainActivity extends Activity implements OnClickListener {
 
 			@Override
 			public void failure(RetrofitError arg0) {
-				Log.e("GOMAN", "2 failed");
 				layoutCustom.setVisibility(View.VISIBLE);
 				layoutCurrency.setVisibility(View.GONE);
 				pbLoading.setVisibility(View.GONE);

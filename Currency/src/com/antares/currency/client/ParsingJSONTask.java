@@ -5,6 +5,7 @@ import java.util.List;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.antares.currency.model.AvailableCurrencyResponse.Currency;
 import com.google.gson.Gson;
@@ -20,8 +21,8 @@ public class ParsingJSONTask extends AsyncTask<Void, Void, Object> {
 	public static void parsing(Context context, String json, Callback callback){
 		if (mTask == null){
 			mTask = new ParsingJSONTask(context, json, callback);
-			mTask.execute();
 		}
+		mTask.execute();
 	}
 	
 	private  ParsingJSONTask(Context context, String json, Callback callback) {
@@ -63,6 +64,7 @@ public class ParsingJSONTask extends AsyncTask<Void, Void, Object> {
 		// TODO Auto-generated method stub
 		Gson gson = new Gson();
 		List<Currency> result = null;
+		Log.e("GOMAN", "doinbackground");
 		try {
 			Type t = new TypeToken<List<Currency>>(){}.getType();
 			result = gson.fromJson(mJson, t);

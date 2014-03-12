@@ -11,4 +11,6 @@
     <string name="currency_destination">To</string>
     <string name="hint">Enter your number</string>
     <string name="hint_text">Value</string>
+    <string name="from">from</string>
+    <string name="to">To</string>
 </resources>
